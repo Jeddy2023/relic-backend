@@ -33,13 +33,10 @@ public class User {
 
     private String phonenumber;
 
-    @Column(length = 1024)
-    private String shopurl;
-
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "created_at", nullable = false)
     private Date createdAt = new Date();
-
-    private Date lastUpdatedTimestamp = new Date();
 }

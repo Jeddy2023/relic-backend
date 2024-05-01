@@ -3,6 +3,7 @@ package com.relic.relic.service.implementations;
 import com.relic.relic.dto.CreateProductDto;
 import com.relic.relic.dto.ProductDto;
 import com.relic.relic.enums.Condition;
+import com.relic.relic.enums.Role;
 import com.relic.relic.exception.BiddingUnauthorizedException;
 import com.relic.relic.exception.CustomException;
 import com.relic.relic.exception.ResourceNotFoundException;
@@ -42,16 +43,13 @@ public class ProductServiceImple implements ProductService {
 
     @Override
     public String createProduct(CreateProductDto createProductDto) {
-        if (createProductDto == null) {
-            throw new CustomException("All fields are required");
-        }
-
-        if (createProductDto.getName() == null || createProductDto.getName().isEmpty() ||
+        if (createProductDto == null ||
+                createProductDto.getName() == null || createProductDto.getName().isEmpty() ||
                 createProductDto.getShortDescription() == null || createProductDto.getShortDescription().isEmpty() ||
                 createProductDto.getDescription() == null || createProductDto.getDescription().isEmpty() ||
                 createProductDto.getCondition() == null ||
                 createProductDto.getMinimumBid() <= 0 ||
-                createProductDto.getBiddingTimeLimit() == null || createProductDto.getBiddingTimeLimit().getTime() <= 0 ){
+                createProductDto.getBiddingTimeLimit() == null || createProductDto.getBiddingTimeLimit().getTime() <= 0) {
             throw new CustomException("All fields are required");
         }
 
@@ -65,6 +63,10 @@ public class ProductServiceImple implements ProductService {
         User user = getLoggedInUser();
         if (user == null) {
             throw new BiddingUnauthorizedException("Login to access this resource");
+        }
+
+        if(user.getRole() != Role.SELLER){
+            throw new BiddingUnauthorizedException("You have to be a Vendor to access this resource");
         }
 
         Optional<Category> category = categoryRepository.findById(createProductDto.getCategoryId());
@@ -93,11 +95,6 @@ public class ProductServiceImple implements ProductService {
     }
 
     @Override
-    public List<ProductDto> findProductsByFilter() {
-        return null;
-    }
-
-    @Override
     public List<ProductDto> getProductByCategory(Long categoryId) {
         List<Product> allProducts = productRepository.findProductsByCategoryId(categoryId);
         return mapProductListToDto(allProducts);
@@ -123,6 +120,12 @@ public class ProductServiceImple implements ProductService {
             throw new ResourceNotFoundException("Product not found");
         }
         Product product = productOptional.get();
+        User user = getLoggedInUser();
+
+        if(user != product.getVendor()){
+            throw new BiddingUnauthorizedException("This product does not belong to you, you cannot delete it");
+        }
+
         productRepository.delete(product);
         return "Product deleted succesfully";
     }
@@ -160,6 +163,10 @@ public class ProductServiceImple implements ProductService {
             throw new BiddingUnauthorizedException("Login to access this resource");
         }
 
+        if(user != product.getVendor()){
+            throw new BiddingUnauthorizedException("This product does not belong to you, you cannot update it");
+        }
+
         Optional<Category> category = categoryRepository.findById(createProductDto.getCategoryId());
         if (!category.isPresent()) {
             throw new ResourceNotFoundException("Category not found");
@@ -178,8 +185,8 @@ public class ProductServiceImple implements ProductService {
         return "Product updated successfully";
     }
     @Override
-    public List<ProductDto> searchProducts(String productName) {
-        List<Product> allProducts = productRepository.findByNameIsContainingIgnoreCase(productName);
+    public List<ProductDto> searchProducts(String keyword) {
+        List<Product> allProducts = productRepository.searchProducts(keyword);
         return mapProductListToDto(allProducts);
     }
 
@@ -269,7 +276,7 @@ public class ProductServiceImple implements ProductService {
     }
     private double calculateAverageRating(Product product) {
         return product.getReviews().stream()
-                .mapToInt(Review::getRating)
+                .mapToDouble(Review::getRating)
                 .average()
                 .orElse(0.0);
     }

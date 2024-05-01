@@ -9,19 +9,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    @Query("SELECT p FROM Product p " +
-            "WHERE (:name IS NULL OR p.name LIKE %:name%) " +
-            "AND (:condition IS NULL OR p.condition LIKE %:condition%) " +
-            "AND (:currentBid IS NULL OR p.currentBid LIKE %:currentBid%) " +
-            "AND (:category IS NULL OR p.category LIKE %:category%) " )
-    List<Product> findProductsByFilters(
-            @Param("name") String name,
-            @Param("condition") String condition,
-            @Param("currentBid") String currentBid,
-            @Param("category") String category
-    );
     List<Product> findProductsByCategoryId(@Param("categoryId") Long categoryId);
     List<Product> findProductsByCondition(@Param("condition") Condition condition);
+    @Query("SELECT p FROM Product p WHERE LOWER(p.name) LIKE %:keyword% OR LOWER(p.shortDescription) LIKE %:keyword%")
+    List<Product> searchProducts(@Param("keyword") String keyword);
     List<Product> findByNameIsContainingIgnoreCase(@Param("productName") String productName);
     @Query("SELECT p FROM Product p WHERE p.minimumBid >= :minimumBid")
     List<Product> findProductsByMinimumBid(Double minimumBid);

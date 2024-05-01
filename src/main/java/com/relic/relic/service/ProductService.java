@@ -3,14 +3,12 @@ package com.relic.relic.service;
 import com.relic.relic.dto.CreateProductDto;
 import com.relic.relic.dto.ProductDto;
 import com.relic.relic.enums.Condition;
-import com.relic.relic.model.Product;
 
 import java.util.List;
 
 public interface ProductService {
     String createProduct(CreateProductDto createProductDto);
     List<ProductDto> getAllProducts();
-    List<ProductDto> findProductsByFilter(String name, String condition);
     List<ProductDto> getProductByCategory(Long categoryId);
     List<ProductDto> getProductByCondition(Condition condition);
     ProductDto getProductById(Long id);

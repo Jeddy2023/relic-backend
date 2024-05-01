@@ -1,7 +1,7 @@
 package com.relic.relic.repository;
 
-import com.relic.relic.model.ShopAddress;
+import com.relic.relic.model.ShopDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ShopAddressRepository extends JpaRepository<ShopAddress, Long> {
+public interface ShopAddressRepository extends JpaRepository<ShopDetails, Long> {
 }
