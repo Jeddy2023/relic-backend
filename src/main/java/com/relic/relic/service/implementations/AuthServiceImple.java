@@ -1,8 +1,13 @@
 package com.relic.relic.service.implementations;
 
+import com.cloudinary.utils.StringUtils;
 import com.relic.relic.dto.*;
+import com.relic.relic.enums.Role;
 import com.relic.relic.exception.*;
+import com.relic.relic.model.Product;
+import com.relic.relic.model.ShippingAddress;
 import com.relic.relic.model.User;
+import com.relic.relic.repository.ShippingAddressRepository;
 import com.relic.relic.repository.UserRepository;
 import com.relic.relic.security.JwtTokenProvider;
 import com.relic.relic.service.AuthService;
@@ -17,29 +22,33 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class AuthServiceImple implements AuthService {
     private UserRepository userRepository;
+    private ShippingAddressRepository shippingAddressRepository;
     private JwtTokenProvider jwtTokenProvider;
     private PasswordEncoder passwordEncoder;
     private AuthenticationManager authenticationManager;
     private ModelMapper modelMapper;
 
-    public AuthServiceImple(UserRepository userRepository, JwtTokenProvider jwtTokenProvider, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, ModelMapper modelMapper) {
+    public AuthServiceImple(UserRepository userRepository, JwtTokenProvider jwtTokenProvider, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, ModelMapper modelMapper, ShippingAddressRepository shippingAddressRepository) {
         this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.modelMapper = modelMapper;
+        this.shippingAddressRepository = shippingAddressRepository;
     }
 
     @Override
     public String register(RegisterCustomerDto registerCustomerDto) {
+        if(registerCustomerDto == null || StringUtils.isBlank(registerCustomerDto.getEmail()) || StringUtils.isBlank(registerCustomerDto.getPassword()) || StringUtils.isBlank(registerCustomerDto.getRole())){
+            throw new CustomException("All fields are required");
+        }
+
         if(userRepository.existsByEmail(registerCustomerDto.getEmail())){
             throw new AlreadyExistsException("Email already exists.");
         }
@@ -47,16 +56,25 @@ public class AuthServiceImple implements AuthService {
             throw new CustomException("Invalid email or password.");
         }
 
+        try {
+            Role.valueOf(registerCustomerDto.getRole().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new CustomException("Role must be ADMIN, SELLER or BUYER");
+        }
+
         User user = new User();
         user.setEmail(registerCustomerDto.getEmail());
         user.setPassword(passwordEncoder.encode(registerCustomerDto.getPassword()));
-        user.setRole(registerCustomerDto.getRole());
+        user.setRole(Role.valueOf(registerCustomerDto.getRole()));
         userRepository.save(user);
         return "You have been registered successfully, Verify your otp then login to continue";
     }
 
     @Override
     public String register(RegisterVendorDto registerVendorDto) {
+        if(registerVendorDto == null || StringUtils.isBlank(registerVendorDto.getEmail()) || StringUtils.isBlank(registerVendorDto.getFirstname()) || StringUtils.isBlank(registerVendorDto.getLastname()) || StringUtils.isBlank(registerVendorDto.getUsername()) || StringUtils.isBlank(registerVendorDto.getPassword()) || StringUtils.isBlank(registerVendorDto.getShopname()) || StringUtils.isBlank(registerVendorDto.getRole())){
+            throw new CustomException("All fields are required");
+        }
         if(userRepository.existsByEmail(registerVendorDto.getEmail())){
             throw new AlreadyExistsException("Email already exists.");
         }
@@ -69,21 +87,42 @@ public class AuthServiceImple implements AuthService {
         if(userRepository.existsByUsername(registerVendorDto.getUsername())){
             throw new AlreadyExistsException("Username already exists");
         }
+        if(userRepository.existsByShopname(registerVendorDto.getShopname())){
+            throw new AlreadyExistsException("Shop Name already exists");
+        }
+
+        try {
+            Role.valueOf(registerVendorDto.getRole().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new CustomException("Role must be ADMIN, SELLER or BUYER");
+        }
+
         User user = new User();
+        ShippingAddress shippingAddress = new ShippingAddress();
+        shippingAddress.setFirstname(registerVendorDto.getFirstname());
+        shippingAddress.setLastname(registerVendorDto.getLastname());
+        shippingAddress.setUser(user);
+
         user.setEmail(registerVendorDto.getEmail());
-        user.setRole(registerVendorDto.getRole());
+        user.setRole(Role.valueOf(registerVendorDto.getRole()));
         user.setPassword(passwordEncoder.encode(registerVendorDto.getPassword()));
         user.setLastname(registerVendorDto.getLastname());
         user.setFirstname(registerVendorDto.getFirstname());
         user.setShopname(registerVendorDto.getShopname());
         user.setUsername(registerVendorDto.getUsername());
         userRepository.save(user);
+        shippingAddressRepository.save(shippingAddress);
+
         return "You have been registered successfully, Verify your otp then login to continue";
     }
 
     @Override
     public LoginResponseDto login(LoginUserDto loginUserDto) {
         try {
+            if(loginUserDto == null || StringUtils.isBlank(loginUserDto.getEmail()) || StringUtils.isBlank(loginUserDto.getPassword())){
+                throw new CustomException("All fields are required");
+            }
+
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginUserDto.getEmail(), loginUserDto.getPassword())
             );
@@ -113,7 +152,13 @@ public class AuthServiceImple implements AuthService {
 
     @Override
     public String updateUserDetails(UpdateUserDetailsDto updateUserDetailsDto) {
+        if(updateUserDetailsDto == null || StringUtils.isBlank(updateUserDetailsDto.getEmail()) || StringUtils.isBlank(updateUserDetailsDto.getFirstname()) || StringUtils.isBlank(updateUserDetailsDto.getLastname()) || StringUtils.isBlank(updateUserDetailsDto.getUsername())){
+            throw new CustomException("All fields are required");
+        }
         User loggedUser = getLoggedInUser();
+        if(userRepository.existsByUsername(updateUserDetailsDto.getUsername()) && !Objects.equals(loggedUser.getUsername(), updateUserDetailsDto.getUsername())){
+            throw new AlreadyExistsException("Username already exists");
+        }
         if (!updateUserDetailsDto.getPassword().isEmpty()) {
             if(updateUserDetailsDto.getNewpassword().isEmpty()){
                 throw new CustomException("Please provide a new password");
@@ -126,6 +171,18 @@ public class AuthServiceImple implements AuthService {
 
             loggedUser.setPassword(newPasswordEncoded);
         }
+
+        Optional<ShippingAddress> optionalShippingAddress = shippingAddressRepository.findByUser(loggedUser);
+
+        if(!optionalShippingAddress.isPresent()){
+            ShippingAddress shippingAddress = new ShippingAddress();
+            shippingAddress.setFirstname(updateUserDetailsDto.getFirstname());
+            shippingAddress.setLastname(updateUserDetailsDto.getLastname());
+            shippingAddress.setUser(loggedUser);
+
+            shippingAddressRepository.save(shippingAddress);
+        }
+
         loggedUser.setUsername(updateUserDetailsDto.getUsername());
         loggedUser.setLastname(updateUserDetailsDto.getLastname());
         loggedUser.setFirstname(updateUserDetailsDto.getFirstname());

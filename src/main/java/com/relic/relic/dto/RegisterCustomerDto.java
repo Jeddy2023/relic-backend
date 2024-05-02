@@ -21,6 +21,5 @@ public class RegisterCustomerDto {
     @Min(value = 6, message = "password must be at least 6 characters")
     private String password;
 
-    @NotNull(message = "role must be provided")
-    private Role role;
+    private String role;
 }

@@ -35,5 +35,5 @@ public class RegisterVendorDto {
     private String shopname;
 
     @NotNull(message = "role must be provided")
-    private Role role;
+    private String role;
 }
