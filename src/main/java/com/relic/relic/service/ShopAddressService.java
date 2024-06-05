@@ -1,4 +1,0 @@
-package com.relic.relic.service;
-
-public interface ShopAddressService {
-}

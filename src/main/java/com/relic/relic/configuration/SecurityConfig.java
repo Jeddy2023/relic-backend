@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -20,14 +21,14 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableMethodSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @SecurityScheme(
         name = "Bearer Authentication",
         type = SecuritySchemeType.HTTP,
         bearerFormat = "JWT",
         scheme = "bearer"
 )
-public class SecurityConfig {
+public class  SecurityConfig {
     private UserDetailsService userDetailsService;
     private JwtAuthenticationFilter jwtAuthenticationFilter;
     private JwtAuthenticationPoint jwtAuthenticationPoint;
@@ -48,13 +49,16 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize->
-                                authorize
-                                        .requestMatchers(HttpMethod.GET,"/api/v1/**").permitAll()
-                                        .requestMatchers("/api/v1/auth/**").permitAll()
-                                        .requestMatchers("/api/v1/auction/**").permitAll()
-                                        .requestMatchers("/swagger-ui/**").permitAll()
-                                        .requestMatchers("/v3/api-docs/**").permitAll()
-                                        .anyRequest().authenticated()
+                        authorize
+                                .requestMatchers(HttpMethod.GET,"/api/v1/**").permitAll()
+                                .requestMatchers("/api/v1/auth/**").permitAll()
+                                .requestMatchers("/api/v1/categories/**").permitAll()
+                                .requestMatchers("/api/v1/auction/**").permitAll()
+                                .requestMatchers("/api/v1/bid/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1//auction/all").permitAll()
+                                .requestMatchers("/swagger-ui/**").permitAll()
+                                .requestMatchers("/v3/api-docs/**").permitAll()
+                                .anyRequest().authenticated()
                 ).exceptionHandling(exception ->exception
                         .authenticationEntryPoint(jwtAuthenticationPoint)
                 ).sessionManagement(session->session

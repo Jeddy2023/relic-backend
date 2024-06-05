@@ -1,0 +1,14 @@
+package com.relic.relic.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ProductAnalyticsDto {
+    private Long id;
+    private String name;
+    private Long totalOrders;
+}

@@ -1,8 +1,5 @@
 package com.relic.relic.dto;
 
-import com.relic.relic.enums.Role;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

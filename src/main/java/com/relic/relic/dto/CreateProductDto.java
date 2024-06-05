@@ -10,6 +10,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CreateProductDto {
+    private String username;
     private String name;
 
     private String shortDescription;
@@ -22,6 +23,8 @@ public class CreateProductDto {
 
     private Long minimumBid;
 
-    private Date biddingTimeLimit;
+    private String biddingTimeLimit;
+
+    private MultipartFile productImage;
 }
 

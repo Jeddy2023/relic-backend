@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Getter
@@ -17,13 +19,13 @@ public class ShopDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String shopname;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shop_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
     private String streetAddress;
-
-    private String apartment;
 
     private String city;
 
@@ -31,5 +33,9 @@ public class ShopDetails {
 
     private String country;
 
-    private Long postalCode;
+    private String postalCode;
+
+    private String phonenumber;
+
+    private String email;
 }

@@ -1,6 +1,5 @@
 package com.relic.relic.model;
 
-import com.relic.relic.enums.NotificationTypes;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,17 +19,17 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    private NotificationTypes type;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recipient_id", nullable = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    private User recipient;
+    @JoinColumn(name = "user_id", nullable=false)
+    private User user;
 
-    private String content;
+    private String message;
 
-    private Boolean read;
+    private boolean isRead = false;
 
-    private Date timestamp;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "timestamp", nullable = false)
+    private Date timestamp = new Date();
+
+    private boolean isAdminNotification = false;
 }

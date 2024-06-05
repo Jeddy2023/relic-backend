@@ -12,17 +12,17 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 public class ShippingAddressController {
     @Autowired
-    ShippingAddressService shippingAddressService;
+    private ShippingAddressService shippingAddressService;
 
     @PostMapping
     public ResponseEntity<String> saveShippingAddress(@RequestBody CreateShippingAddressDTO createShippingAddressDTO) {
         String createdShippingAddress = shippingAddressService.saveAddress(createShippingAddressDTO);
-        return new ResponseEntity<>(createdShippingAddress, HttpStatus.CREATED);
+        return new ResponseEntity<>(createdShippingAddress, HttpStatus.OK);
     }
 
     @GetMapping
     public ResponseEntity<CreateShippingAddressDTO> getUserShippingAddress() {
         CreateShippingAddressDTO shippingAddress = shippingAddressService.getUserShippingAddress();
-        return new ResponseEntity<>(shippingAddress, HttpStatus.CREATED);
+        return new ResponseEntity<>(shippingAddress, HttpStatus.OK);
     }
 }

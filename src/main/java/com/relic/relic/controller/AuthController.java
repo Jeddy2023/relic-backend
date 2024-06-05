@@ -18,20 +18,32 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping("/register/customer")
-    public ResponseEntity<String> registerCustomer(@RequestBody RegisterCustomerDto registerCustomerDto) {
-        String message = authService.register(registerCustomerDto);
+    public ResponseEntity<RegisterResponseDto> registerCustomer(@RequestBody RegisterCustomerDto registerCustomerDto) {
+        RegisterResponseDto message = authService.register(registerCustomerDto);
         return new ResponseEntity<>(message, HttpStatus.OK);
     }
 
     @PostMapping("/register/vendor")
-    public ResponseEntity<String> registerVendor(@RequestBody RegisterVendorDto registerVendorDto) {
-        String message = authService.register(registerVendorDto);
+    public ResponseEntity<RegisterResponseDto> registerVendor(@RequestBody RegisterVendorDto registerVendorDto) {
+        RegisterResponseDto message = authService.register(registerVendorDto);
         return new ResponseEntity<>(message, HttpStatus.OK);
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> userLogin(@Valid @RequestBody LoginUserDto loginUserDto){
         return new ResponseEntity<>(authService.login(loginUserDto), HttpStatus.OK);
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<String> verifyEmail(@RequestBody VerifyEmailDto verifyEmailDto) {
+        String response = authService.verifyEmail(verifyEmailDto);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<String> resendOtp(@RequestBody String verificationToken) {
+        String response = authService.resendOtp(verificationToken);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping

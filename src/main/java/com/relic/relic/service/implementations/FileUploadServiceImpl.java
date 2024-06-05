@@ -18,16 +18,17 @@ public class FileUploadServiceImpl implements FileUploadService {
 
     @Override
     public String uploadImage(MultipartFile multipartFile) throws IOException {
+        String folder = "relic";
         Map<?, ?> uploadResult = cloudinary.uploader()
                 .upload(multipartFile.getBytes(),
                         ObjectUtils.asMap(
+                                "folder", folder,
                                 "use_filename", true,
-                                "unique_filename", false,
-                                "overwrite", true,
-                                "invalidate", true
+                                "unique_filename", true,
+                                "invalidate", true,
+                                "public_id", "unique_public_id"
                         ));
 
-        // extract the image url from the upload result
         return (String) uploadResult.get("url");
     }
 }

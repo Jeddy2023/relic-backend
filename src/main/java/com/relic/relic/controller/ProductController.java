@@ -1,15 +1,23 @@
 package com.relic.relic.controller;
-
 import com.relic.relic.dto.CreateProductDto;
 import com.relic.relic.dto.ProductDto;
+import com.relic.relic.dto.TotalProductsCountDto;
+import com.relic.relic.dto.UserProductDto;
 import com.relic.relic.enums.Condition;
-import com.relic.relic.model.Category;
+import com.relic.relic.service.CategoryService;
 import com.relic.relic.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -17,30 +25,39 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class ProductController {
     @Autowired
-    ProductService productService;
+    private ProductService productService;
+    @Autowired
+    private CategoryService categoryService;
 
-    @PostMapping
-    public ResponseEntity<String> createAuction(@RequestBody CreateProductDto createProductDto) {
+    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public ResponseEntity<String> createAuction(@ModelAttribute @Valid CreateProductDto createProductDto) throws IOException {
         String createdProduct = productService.createProduct(createProductDto);
-        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+        return ResponseEntity.ok().body(createdProduct);
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<ProductDto>> getAllProducts() {
-        List<ProductDto> products = productService.getAllProducts();
-        return new ResponseEntity<>(products, HttpStatus.OK);
-    }
+    public ResponseEntity<Page<ProductDto>> getAllProducts(
+            @RequestParam(defaultValue = "false") boolean totalWonProducts,
+            @RequestParam(defaultValue = "false") boolean totalActiveAuctions,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Condition condition,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long minBid,
+            @RequestParam(required = false) Long maxBid,
+            @RequestParam(required = false) Double minimumBid,
+            @RequestParam(required = false) Integer rating,
+            @RequestParam(required = false, defaultValue = "Default Sorting") String sortBy,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        List<ProductDto> products = productService.getAllProducts(totalWonProducts, totalActiveAuctions,categoryId, condition, keyword, minBid, maxBid, minimumBid, rating, sortBy);
 
-    @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<ProductDto>> getProductByCategory(@PathVariable Long categoryId) {
-        List<ProductDto> products = productService.getProductByCategory(categoryId);
-        return new ResponseEntity<>(products, HttpStatus.OK);
-    }
+        int start = Math.min(page * size, products.size());
+        int end = Math.min((page + 1) * size, products.size());
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductDto> productPage = new PageImpl<>(products.subList(start, end), pageable, products.size());
 
-    @GetMapping("/condition/{condition}")
-    public ResponseEntity<List<ProductDto>> getProductByCondition(@PathVariable Condition condition) {
-        List<ProductDto> products = productService.getProductByCondition(condition);
-        return new ResponseEntity<>(products, HttpStatus.OK);
+        return new ResponseEntity<>(productPage, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
@@ -55,70 +72,67 @@ public class ProductController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<String> updateProduct(@PathVariable Long id, @RequestBody CreateProductDto createProductDto) {
+    @PutMapping(value = "/{id}",consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public ResponseEntity<String> updateProduct(@PathVariable Long id, @ModelAttribute @Valid CreateProductDto createProductDto) {
         String response = productService.updateProduct(id, createProductDto);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<List<ProductDto>> searchProducts(@RequestParam String keyword) {
-        List<ProductDto> products = productService.searchProducts(keyword);
-        return new ResponseEntity<>(products, HttpStatus.OK);
+    @GetMapping("/user")
+    public ResponseEntity<Page<UserProductDto>> getUserProducts(
+            @RequestParam(defaultValue = "false") boolean pendingReviews,
+            @RequestParam(defaultValue = "false") boolean activeProducts,
+            @RequestParam(defaultValue = "false") boolean offlineBid,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Long userId
+    ) {
+        List<UserProductDto> products = productService.getUserProducts(pendingReviews, activeProducts, offlineBid , keyword, userId);
+
+        int start = Math.min(page * size, products.size());
+        int end = Math.min((page + 1) * size, products.size());
+        Pageable pageable = PageRequest.of(page, size);
+        Page<UserProductDto> productPage = new PageImpl<>(products.subList(start, end), pageable, products.size());
+
+        return new ResponseEntity<>(productPage, HttpStatus.OK);
     }
 
-    @GetMapping("/bid-range")
-    public ResponseEntity<List<ProductDto>> getProductsByCurrentBidRange(@RequestParam Long minBid, @RequestParam Long maxBid) {
-        List<ProductDto> products = productService.getProductsByCurrentBidRange(minBid, maxBid);
-        return new ResponseEntity<>(products, HttpStatus.OK);
+    @GetMapping("/totals")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<TotalProductsCountDto> getTotalProductCounts() {
+        TotalProductsCountDto countsDto = productService.getTotalProductCounts();
+        return new ResponseEntity<>(countsDto, HttpStatus.OK);
     }
 
-    @GetMapping("/minimum-bid/{minimumBid}")
-    public ResponseEntity<List<ProductDto>> getProductsByMinimumBid(@PathVariable Double minimumBid) {
-        List<ProductDto> products = productService.getProductsByMinimumBid(minimumBid);
-        return new ResponseEntity<>(products, HttpStatus.OK);
+    @PostMapping(value = "/username/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> createAuctionWithUsername(@ModelAttribute @Valid CreateProductDto createProductDto) throws IOException {
+        String createdProduct = productService.createProductWithUsername(createProductDto);
+        return ResponseEntity.ok().body(createdProduct);
     }
 
-    @GetMapping("/rating/{rating}")
-    public ResponseEntity<List<ProductDto>> getProductsByRating(@PathVariable int rating) {
-        List<ProductDto> products = productService.getProductsByRating(rating);
-        return new ResponseEntity<>(products, HttpStatus.OK);
+    @PutMapping("/{id}/block")
+    public ResponseEntity<String> blockProduct(@PathVariable Long id) {
+        String response = productService.blockProduct(id);
+        return ResponseEntity.ok().body(response);
     }
 
-    @GetMapping("/sorted/average-rating")
-    public ResponseEntity<List<ProductDto>> getProductsSortedByAverageRating() {
-        List<ProductDto> products = productService.getProductsSortedByAverageRating();
-        return new ResponseEntity<>(products, HttpStatus.OK);
+    @PutMapping("/{id}/unblock")
+    public ResponseEntity<String> unblockProduct(@PathVariable Long id) {
+        String response = productService.unblockProduct(id);
+        return ResponseEntity.ok().body(response);
     }
 
-    @GetMapping("/sorted/current-bid-low-to-high")
-    public ResponseEntity<List<ProductDto>> getProductsSortedByCurrentBidLowToHigh() {
-        List<ProductDto> products = productService.getProductsSortedByCurrentBidLowToHigh();
-        return new ResponseEntity<>(products, HttpStatus.OK);
+    @PutMapping("/{id}/end")
+    public ResponseEntity<String> endProduct(@PathVariable Long id) {
+        String response = productService.endProduct(id);
+        return ResponseEntity.ok().body(response);
     }
 
-    @GetMapping("/sorted/current-bid-high-to-low")
-    public ResponseEntity<List<ProductDto>> getProductsSortedByCurrentBidHighToLow() {
-        List<ProductDto> products = productService.getProductsSortedByCurrentBidHighToLow();
-        return new ResponseEntity<>(products, HttpStatus.OK);
-    }
-
-    @GetMapping("/sorted/auction-ending-soonest")
-    public ResponseEntity<List<ProductDto>> getProductsSortedByAuctionEndingSoonest() {
-        List<ProductDto> products = productService.getProductsSortedByAuctionEndingSoonest();
-        return new ResponseEntity<>(products, HttpStatus.OK);
-    }
-
-    @GetMapping("/sorted/recently-started")
-    public ResponseEntity<List<ProductDto>> getProductsSortedByRecentlyStarted() {
-        List<ProductDto> products = productService.getProductsSortedByRecentlyStarted();
-        return new ResponseEntity<>(products, HttpStatus.OK);
-    }
-
-    @GetMapping("/sorted/most-active")
-    public ResponseEntity<List<ProductDto>> getProductsSortedByMostActive() {
-        List<ProductDto> products = productService.getProductsSortedByMostActive();
-        return new ResponseEntity<>(products, HttpStatus.OK);
+    @PutMapping("/{id}/reset-winner")
+    public ResponseEntity<String> resetWinningBidder(@PathVariable Long id) {
+        String response = productService.resetWinningBidder(id);
+        return ResponseEntity.ok().body(response);
     }
 
 }

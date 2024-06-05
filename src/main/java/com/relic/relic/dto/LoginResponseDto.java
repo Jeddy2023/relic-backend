@@ -15,4 +15,5 @@ public class LoginResponseDto {
     UserDto user;
     private String accessToken;
     private String message;
+    private long expiresIn;
 }

@@ -10,6 +10,16 @@ import java.util.Date;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorDetailsDto> handleAllExceptions(Exception exception) {
+        ErrorDetailsDto errorDetails = new ErrorDetailsDto(
+                exception.getMessage(),
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                new Date()
+        );
+        return new ResponseEntity<>(errorDetails, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @ExceptionHandler(value = AlreadyExistsException.class)
     public ResponseEntity<ErrorDetailsDto> handleAlreadyExistsException(AlreadyExistsException exception){
         ErrorDetailsDto errorDetails = new ErrorDetailsDto(exception.getMessage(),

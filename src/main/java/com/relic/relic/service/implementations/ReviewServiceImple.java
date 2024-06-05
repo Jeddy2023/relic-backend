@@ -11,10 +11,8 @@ import com.relic.relic.exception.ResourceNotFoundException;
 import com.relic.relic.model.Product;
 import com.relic.relic.model.Review;
 import com.relic.relic.model.User;
-import com.relic.relic.repository.CategoryRepository;
-import com.relic.relic.repository.ProductRepository;
-import com.relic.relic.repository.ReviewRepository;
-import com.relic.relic.repository.UserRepository;
+import com.relic.relic.repository.*;
+import com.relic.relic.service.NotificationService;
 import com.relic.relic.service.ReviewService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -37,6 +35,8 @@ public class ReviewServiceImple implements ReviewService {
     private ReviewRepository reviewRepository;
     private ModelMapper modelMapper;
     private UserRepository userRepository;
+    private BiddingRepository biddingRepository;
+    private final NotificationService notificationService;
 
     @Override
     public String giveproductReview(ProductReveiwDto productReviewDTO, Long productId) {
@@ -47,7 +47,7 @@ public class ReviewServiceImple implements ReviewService {
 
         Product product = productOptional.get();
 
-        if(productReviewDTO.getComment().isEmpty() || productReviewDTO.getRating() <= 0){
+        if (productReviewDTO.getComment().isEmpty() || productReviewDTO.getRating() <= 0) {
             throw new CustomException("All fields are required");
         }
 
@@ -56,14 +56,25 @@ public class ReviewServiceImple implements ReviewService {
             throw new BiddingUnauthorizedException("Login to access this resource");
         }
 
-        Review reviews = new Review();
-        reviews.setReviewType(ReviewType.PRODUCT_REVIEW);
-        reviews.setComment(productReviewDTO.getComment());
-        reviews.setRating(productReviewDTO.getRating());
-        reviews.setUser(user);
-        reviews.setProduct(product);
-        reviewRepository.save(reviews);
-        return "Review sent successfully";
+        Optional<Review> existingReview = reviewRepository.findByUserAndProduct(user, product);
+        if (existingReview.isPresent()) {
+            Review review = existingReview.get();
+            review.setComment(productReviewDTO.getComment());
+            review.setRating(productReviewDTO.getRating());
+            reviewRepository.save(review);
+            notificationService.sendNotification("Review updated by " + user.getUsername() + " on " + product.getName(), product.getVendor().getId());
+            return "Review updated successfully";
+        } else {
+            Review review = new Review();
+            review.setReviewType(ReviewType.PRODUCT_REVIEW);
+            review.setComment(productReviewDTO.getComment());
+            review.setRating(productReviewDTO.getRating());
+            review.setUser(user);
+            review.setProduct(product);
+            reviewRepository.save(review);
+            notificationService.sendNotification("New review by " + user.getUsername() + " on " + product.getName(), product.getVendor().getId());
+            return "Review sent successfully";
+        }
     }
 
     @Override

@@ -1,13 +1,18 @@
 package com.relic.relic.security;
 
+import com.relic.relic.exception.BiddingUnauthorizedException;
 import com.relic.relic.exception.CustomException;
 import com.relic.relic.exception.RelicException;
+import com.relic.relic.exception.ResourceNotFoundException;
+import com.relic.relic.model.User;
+import com.relic.relic.repository.UserRepository;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,6 +30,12 @@ public class JwtTokenProvider {
 
     @Value("${app.jwt-access-token-expiration}")
     private long jwtExpirationDate;
+
+    @Value("${app.jwt-verification-token-expiration}")
+    private long jwtVerificationTokenExpiration;
+
+    @Autowired
+    private UserRepository userRepository;
 
     public String generateAccessToken(Authentication authentication) {
         String username = authentication.getName();
@@ -54,6 +65,27 @@ public class JwtTokenProvider {
                 .getSubject();
     }
 
+    public String generateVerificationToken(User user) {
+        Date currentDate = new Date();
+        Date expireDate = new Date(currentDate.getTime() + jwtVerificationTokenExpiration);
+
+        return Jwts.builder()
+                .setSubject(user.getUsername())
+                .setIssuedAt(currentDate)
+                .setExpiration(expireDate)
+                .signWith(key())
+                .compact();
+    }
+
+    public User getUserFromToken(String token) {
+        if (validateToken(token)) {
+            String username = getUsername(token);
+            return userRepository.findByUsername(username)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        }
+        throw new BiddingUnauthorizedException("Invalid token");
+    }
+
     // validate JWT token
     public boolean validateToken(String token){
         try{
@@ -71,5 +103,9 @@ public class JwtTokenProvider {
         }catch (IllegalArgumentException illegalArgumentException){
             throw new CustomException("Jwt claims string is null or empty");
         }
+    }
+
+    public long getJwtExpirationDate() {
+        return jwtExpirationDate;
     }
 }

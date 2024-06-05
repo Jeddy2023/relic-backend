@@ -13,4 +13,7 @@ public class UserDto {
     private String username;
     private String email;
     private String role;
+    private boolean isBlocked;
+    private boolean isVerified;
+    private String shopname;
 }

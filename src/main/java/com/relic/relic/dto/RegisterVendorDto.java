@@ -36,4 +36,6 @@ public class RegisterVendorDto {
 
     @NotNull(message = "role must be provided")
     private String role;
+
+    private String phonenumber;
 }
